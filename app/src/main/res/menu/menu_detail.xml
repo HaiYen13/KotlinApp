@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/action_down_detail"
+        android:title="Download"
+        android:icon="@drawable/custom_ic_download"
+        />
+    <item
+        android:id="@+id/action_fav_detail"
+        android:title="FAvorite"
+        android:icon="@drawable/custom_ic_favorite"
+        />
+</menu>

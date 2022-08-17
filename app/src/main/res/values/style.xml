@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="menu">
+        <item name="android:textColor">@color/primary</item>
+        <item name="android:textSize">10dp</item>
+    </style>
+    <style name="menu_detail">
+        <item name="android:textColor">@color/primary</item>
+        <item name="android:textSize">10dp</item>
+    </style>
+
+</resources>

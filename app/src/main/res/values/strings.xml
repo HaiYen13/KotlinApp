@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">My Kotlin app</string>
+    <string name="snooze">Stop</string>
+</resources>
