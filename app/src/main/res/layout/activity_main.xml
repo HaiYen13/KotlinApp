@@ -11,10 +11,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/bottomNavi"
         app:layout_constraintStart_toStartOf="parent"
-        android:layout_above="@+id/bottomNavi"
-        >
-
-    </FrameLayout>
+        android:layout_above="@+id/bottomNavi"/>
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNavi"
         android:layout_alignParentBottom="true"
@@ -22,6 +19,9 @@
         android:layout_width="match_parent"
         android:background="@color/white"
         app:menu="@menu/menu_main"
+        app:itemIconTint="@color/custom_navi"
+        app:itemTextColor="@color/custom_navi"
+        style="@style/menu"
         android:backgroundTint="@color/white"
         app:itemRippleColor="@color/teal_700">
 

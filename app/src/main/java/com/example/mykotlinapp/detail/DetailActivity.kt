@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.ProgressDialog
 import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -71,12 +72,14 @@ class DetailActivity : AppCompatActivity() {
     private fun initAction() {
         var model: ImageModel= list!![pos]
         imgDownload!!.setOnClickListener {
+
             if (isStoragePermissionGranted()) {
-                val urls = java.util.ArrayList<String>()
-                urls.add(model.url)
-                //                    new DownLoadingImageAsynctask(DetailActivity.this).execute(urls);
-                //TODO:use Service instead of Asynctask
-                startDownService(urls)
+                val urls: ArrayList<String> = ArrayList()
+                urls.let {
+                    it.add(model.url)
+                    //TODO:use Service instead of Coroutine
+                    startDownService(urls)
+                }
                 mProgressDialog?.show()
                 historyHelper?.insertHistory(model, historyTableName)
             }
@@ -130,7 +133,7 @@ class DetailActivity : AppCompatActivity() {
             imgFavorite!!.setImageResource(R.drawable.ic_favorite_selected)
         } else imgFavorite!!.setImageResource(R.drawable.ic_favorite)
     }
-    private fun startDownService(urls: java.util.ArrayList<String>) {
+    private fun startDownService(urls: ArrayList<String>) {
         val intent = Intent(this, DownImageService::class.java)
         intent.putExtra("key_down_intent", urls)
         //TODO: Android 8 and lower use startService
@@ -141,54 +144,6 @@ class DetailActivity : AppCompatActivity() {
             startForegroundService(intent)
         }
     }
-
-//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-//        super.onActivityResult(requestCode, resultCode, data)
-//        super.onActivityResult(requestCode, resultCode, data)
-//        if (requestCode == RQ_WRITE_PERMISSION) {
-//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-//                if (Environment.isExternalStorageManager()) {
-//                    DownLoadingImageAsynctask(this).equals(list!![pos].url)
-//                } else {
-//                    Toast.makeText(this,
-//                        "Allow permission for storage access",
-//                        Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//        }
-//
-//    }
-
-//    override fun onRequestPermissionsResult(
-//        requestCode: Int,
-//        permissions: Array<String>,
-//        grantResults: IntArray,
-//    ) {
-//        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-//        if (requestCode == RQ_WRITE_PERMISSION) {
-//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-//                if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-//                    Log.v("DetaiActivity.PerRes",
-//                        "Permission: " + permissions[0] + "was " + grantResults[0])
-//                    DownLoadingImageAsynctask(this@DetailActivity).equals(list!![pos].getUrl())
-//                } else {
-//                    AlertDialog.Builder(this@DetailActivity)
-//                        .setMessage("You need to enable permision to use this feature")
-//                        .setPositiveButton("Go to settings"
-//                        ) { dialog, which ->
-//                            val intent = Intent()
-//                            val uri =
-//                                Uri.fromParts("package", this@DetailActivity.packageName, null)
-//                            intent.data = uri
-//                            startActivityForResult(intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS),
-//                                RQ_WRITE_PERMISSION)
-//                        }.setNegativeButton("Go back"
-//                        ) { dialog, which -> initView() }.show()
-//                }
-//            }
-//        }
-//    }
-
     fun isStoragePermissionGranted(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             true
@@ -197,12 +152,69 @@ class DetailActivity : AppCompatActivity() {
                 DebugHelper.logDebug("Permison is granted", "")
                 true
             } else {
-                ActivityCompat.requestPermissions(this,
+                ActivityCompat.requestPermissions(this@DetailActivity,
                     arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
                     RQ_WRITE_PERMISSION)
                 false
             }
         } else true // android < 6 khong can request permistion
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == RQ_WRITE_PERMISSION) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                if (Environment.isExternalStorageManager()) {
+//                    DownLoadingImageAsynctask(this@DetailActivity).equals(list!![pos].getUrl())
+                    val urls: ArrayList<String> = ArrayList()
+                    urls.let {
+                        list?.get(pos)?.let { it1 -> it.add(it1.url) }
+                        //TODO:use Service instead of Coroutine
+                        startDownService(urls)
+                    }
+                    mProgressDialog?.show()
+                    list?.let { historyHelper?.insertHistory(it[pos], historyTableName) }
+                } else {
+                    Toast.makeText(this,
+                        "Allow permission for storage access",
+                        Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == RQ_WRITE_PERMISSION) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.v("DetaiActivity.PerRes",
+                        "Permission: " + permissions[0] + "was " + grantResults[0])
+////                    DownLoadingImageAsynctask(this@DetailActivity).equals(list!![pos].getUrl())
+//                    val urls: ArrayList<String> = ArrayList()
+//                    urls.let {
+//                        it.add(list!![pos].url)
+//                        //TODO:use Service instead of Coroutine
+//                        startDownService(urls)
+//                    }
+                } else {
+                    AlertDialog.Builder(this)
+                        .setMessage("You need to enable permision to use this feature")
+                        .setPositiveButton("Go to settings"
+                        ) { _, _ ->
+                            val intent = Intent()
+                            val uri =
+                                Uri.fromParts("package", this.packageName, null)
+                            intent.data = uri
+                            startActivityForResult(intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS),
+                                RQ_WRITE_PERMISSION)
+                        }.setNegativeButton("Go back"
+                        ) { _, _ -> initView() }.show()
+                }
+            }
+        }
     }
 
     override fun onBackPressed() {
@@ -213,4 +225,18 @@ class DetailActivity : AppCompatActivity() {
         setResult(123, intent)
         super.onBackPressed()
     }
+
+    override fun onStart() {
+        super.onStart()
+        var intent = IntentFilter("UPDATE")
+        this.registerReceiver(mBroadcastReceiver, intent)
+
+    }
+
+    override fun onStop() {
+        super.onStop()
+        DebugHelper.logDebug("onStop", "mBroadcastReceiver")
+        this .unregisterReceiver(mBroadcastReceiver)
+    }
 }
+
