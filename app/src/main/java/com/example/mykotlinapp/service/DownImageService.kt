@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.*
 import android.provider.MediaStore
+import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -20,6 +21,7 @@ import com.example.mykotlinapp.utils.DebugHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.media.app.NotificationCompat as MediaNotificationCompat
 import java.io.*
 import java.net.URL
 import java.util.*
@@ -31,6 +33,8 @@ class DownImageService : Service() {
     private val PROGRESS_MAX = 100
     private val PROGRESS_CURRENT = 0
     private val description = "Test notification"
+    private var mNotifyManager: NotificationManager ? = null
+    private var channelId: String ? = null
     companion object {
         private const val TAG = "Download"
         private const val DOWNLOADNG_ACTION = "com.yenvth.DownloadACTION"
@@ -45,29 +49,28 @@ class DownImageService : Service() {
     override fun onCreate() {
         super.onCreate()
         DebugHelper.logDebug("DownImageService.onCreate", "")
-            startForeground()
+        startForeground()
     }
-private fun startForeground() {
-    val channelId =
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
+    private fun startForeground() {
+        mNotifyManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager?
+        channelId = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
             createNotificationChannel(CHANNEL_ID, "My Background Service")
         } else {
             "CHANNEL_EXAMPLE"
         }
-    var notification = NotificationCompat.Builder(this, channelId)
+     notification = NotificationCompat.Builder(this, channelId!!)
                 .setContentTitle("Image download")
                 .setContentText("Download in progress")
                 .setSmallIcon(R.drawable.ic_download)
                 .setContentIntent(pendingIntent)
                 .setSilent(true)
-                .setProgress(PROGRESS_MAX, PROGRESS_CURRENT, false)
+                .addAction(R.drawable.ic_cancel, "Stop", null)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setAutoCancel(true)
                 .build()
             //StartForeground phải được gọi trong vòng 5s kể từ khi khởi tạo
             startForeground(1, notification)
 }
-
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(channelId: String, channelName: String): String{
         val chan = NotificationChannel(channelId,
@@ -135,7 +138,7 @@ private fun startForeground() {
                     DebugHelper.logDebug("% of dialog down", progress.toString() + "")
                     sendBroadcast(result)
                     sendNotification(progress)
-
+                    notification
                     Thread.sleep(500)
                     // writing data to file
                     outputStream.write(data, 0, count)
@@ -201,8 +204,8 @@ private fun startForeground() {
                         DebugHelper.logDebug("% of dialog down", progress.toString() + "")
                         sendBroadcast(result)
                         //                    sendNoti(progress);
-                        sendProgress(progress)
-//                        sendNotification(progress)
+                        sendNotification(progress)
+//                        notification
                         Thread.sleep(500)
                     }
                     //5
@@ -226,10 +229,6 @@ private fun startForeground() {
         sendBroadcast(result)
     }
 
-    private fun sendProgress(progress: Int) {
-
-    }
-
     private fun getBitmapFromURL(file_url: String): Bitmap? {
         return try {
             val url = URL(file_url)
@@ -246,26 +245,34 @@ private fun startForeground() {
     }
     private fun sendNotification(progressCurrent: Int) {
         val notificationManagerCompat = NotificationManagerCompat.from(this)
-        notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Image download 1")
-            .setContentText("Download in progress")
-            .setSmallIcon(R.drawable.ic_download)
-            .setContentIntent(pendingIntent)
-            .setSilent(true)
-            .setProgress(PROGRESS_MAX, progressCurrent, false)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .build()
-        notificationManagerCompat.notify(1, notification!!)
-        if (progressCurrent == PROGRESS_MAX) {
-            notification = NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Download Image")
-                .setContentText("Download complete")
+//        val mediaActionCompat = MediaSessionCompat(this,"tag")
+        notification = channelId?.let {
+            NotificationCompat.Builder(this, it)
+                .setContentTitle("Image download 1")
+                .setContentText("Download in progress")
                 .setSmallIcon(R.drawable.ic_download)
                 .setContentIntent(pendingIntent)
-                .setSilent(false)
-                .setProgress(0, 0, false)
+                .addAction(R.drawable.ic_cancel, "Cancel", null) //#0
+                .addAction(R.drawable.ic_stop_dowload, "Stop download", null)//#1
+                .setSilent(true)
+                .setProgress(PROGRESS_MAX, progressCurrent, false)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .build()
+        }
+        notificationManagerCompat.notify(1, notification!!)
+        if (progressCurrent == PROGRESS_MAX) {
+            notification = channelId?.let {
+                NotificationCompat.Builder(this, it)
+                    .setContentTitle("Download Image")
+                    .setContentText("Download complete")
+                    .setSmallIcon(R.drawable.ic_download)
+                    .setContentIntent(pendingIntent)
+                    .setSilent(true)
+                    .addAction(R.drawable.ic_cancel, "Cancel", null)
+                    .setProgress(0, 0, false)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .build()
+            }
             notificationManagerCompat.notify(1, notification!!)
         }
     }
