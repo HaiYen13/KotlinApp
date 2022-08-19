@@ -38,12 +38,14 @@ class DownImageService : Service() {
     private var channelId: String ? = null
     private var snoozeIntent: Intent ? = null
     private var snoozePendingIntent: PendingIntent ? = null
+    private var noti : NotificationCompat.Builder?=null
+    private var notificationManagerCompat: NotificationManagerCompat ?= null
     companion object {
         private const val TAG = "Download"
-        private const val DOWNLOADNG_ACTION = "com.yenvth.DownloadACTION"
-        private const val DOWNLOADNG_TEXT = "com.yenvth.Text"
+        const val DOWNLOADNG_ACTION = "com.MyKotlinApp.DownloadService.DownloadACTION"
         const val CHANNEL_ID = "CHANNEL_EXAMPLE"
-        const val ACTION_SNOOZE = "action_snooze"
+        const val ACTION_SNOOZE = "com.MyKotlinApp.DownloadService.action_snooze"
+        const val DOWNLOAD_NOTIFICATION_ID = 1
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -56,31 +58,37 @@ class DownImageService : Service() {
         startForeground()
     }
     private fun startForeground() {
-        snoozeIntent = Intent(this, MyReceiver::class.java).apply {
+        snoozeIntent = Intent(this, DownImageService::class.java).apply {
             action = ACTION_SNOOZE
-            putExtra(EXTRA_NOTIFICATION_ID, 0)
+            putExtra(CHANNEL_ID, 0)
         }
         snoozePendingIntent =
-            PendingIntent.getBroadcast(this, 0, snoozeIntent, 0)
+            PendingIntent.getService(this, 0, snoozeIntent!!, 0)
         mNotifyManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager?
         channelId = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
             createNotificationChannel(CHANNEL_ID, "My Background Service")
         } else {
             "CHANNEL_EXAMPLE"
         }
-     notification = NotificationCompat.Builder(this, channelId!!)
-                .setContentTitle("Image download")
+        notificationManagerCompat = NotificationManagerCompat.from(this)
+        noti =
+            channelId?.let { NotificationCompat.Builder(this, it)
+                .setContentTitle("Image download 1")
                 .setContentText("Download in progress")
                 .setSmallIcon(R.drawable.ic_download)
                 .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .addAction(R.drawable.ic_cancel, "Cancel", null) //#0
+                .addAction(R.drawable.ic_stop_dowload, "Stop", snoozePendingIntent) //#1
                 .setSilent(true)
-                .addAction(R.drawable.ic_stop_dowload, "Stop", snoozePendingIntent)
-                .addAction(R.drawable.ic_cancel, "cancel", null)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOnlyAlertOnce(true)
                 .setAutoCancel(true)
-                .build()
+                .setProgress(PROGRESS_MAX, PROGRESS_CURRENT, false)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+            }
+        noti?.let { notificationManagerCompat!!.notify(DOWNLOAD_NOTIFICATION_ID, it.build()) }
             //StartForeground phải được gọi trong vòng 5s kể từ khi khởi tạo
-            startForeground(1, notification)
+            startForeground(DOWNLOAD_NOTIFICATION_ID, noti?.build())
 }
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(channelId: String, channelName: String): String{
@@ -111,10 +119,14 @@ class DownImageService : Service() {
         }
         return START_STICKY
     }
+
     override fun onDestroy() {
         super.onDestroy()
         DebugHelper.logDebug(TAG, "Service onDestroy")
         Toast.makeText(this, "Service Destroyed", Toast.LENGTH_SHORT).show()
+    }
+    private fun stopDownload(){
+
     }
 
     private fun saveImageToExternalStorage(
@@ -143,13 +155,12 @@ class DownImageService : Service() {
                 while (inputStream.read(data).also { count = it } != -1) {
                     total += count.toLong()
                     //TODO: publishing the progress....
-                    val result = Intent("UPDATE")
+                    val result = Intent(DOWNLOADNG_ACTION)
                     val progress = (total * 100 / lengthOfFile).toInt()
                     result.putExtra("process", progress)
-                    DebugHelper.logDebug("% of dialog down", progress.toString() + "")
+                    DebugHelper.logDebug("Service % of dialog down", progress.toString() + "")
                     sendBroadcast(result)
-                    sendNotification(progress)
-                    notification
+                    noti?.let { updateNotification(it, progress) }
                     Thread.sleep(500)
                     // writing data to file
                     outputStream.write(data, 0, count)
@@ -161,10 +172,14 @@ class DownImageService : Service() {
         } catch (e: Exception) {
             Log.e("Error", e.message!!)
         }
-        val result = Intent("UPDATE")
+        val result = Intent(DOWNLOADNG_ACTION)
         result.putExtra("process", 100)
         sendBroadcast(result)
+        noti?.let { finishNotification(it) }
     }
+
+
+
 
     private fun saveImageToScopedStorage(
         urls: ArrayList<String>?,
@@ -209,14 +224,12 @@ class DownImageService : Service() {
                     val data = ByteArray(1024)
                     while (inputStream.read(data).also { count = it } != -1) {
                         total += count.toLong()
-                        val result = Intent("UPDATE")
+                        val result = Intent(DOWNLOADNG_ACTION)
                         val progress = (total * 100 / lengthOfBitmap).toInt()
                         result.putExtra("process", progress)
                         DebugHelper.logDebug("% of dialog down", progress.toString() + "")
                         sendBroadcast(result)
-                        //                    sendNoti(progress);
-                        sendNotification(progress)
-//                        notification
+                        noti?.let { updateNotification(it, progress) }
                         Thread.sleep(500)
                     }
                     //5
@@ -235,10 +248,12 @@ class DownImageService : Service() {
         } catch (e: Throwable) {
             e.printStackTrace()
         }
-        val result = Intent("UPDATE")
+        val result = Intent(DOWNLOADNG_ACTION)
         result.putExtra("process", 100)
         sendBroadcast(result)
+        noti?.let { finishNotification(it) }
     }
+
 
     private fun getBitmapFromURL(file_url: String): Bitmap? {
         return try {
@@ -254,38 +269,15 @@ class DownImageService : Service() {
             null
         }
     }
-    private fun sendNotification(progressCurrent: Int) {
-        val notificationManagerCompat = NotificationManagerCompat.from(this)
-//        val mediaActionCompat = MediaSessionCompat(this,"tag")
-        notification = channelId?.let {
-            NotificationCompat.Builder(this, it)
-                .setContentTitle("Image download 1")
-                .setContentText("Download in progress")
-                .setSmallIcon(R.drawable.ic_download)
-                .setContentIntent(pendingIntent)
-                .addAction(R.drawable.ic_cancel, "Cancel", null) //#0
-                .addAction(R.drawable.ic_stop_dowload, "Stop", snoozePendingIntent) //#1
-                .setSilent(true)
-                .setProgress(PROGRESS_MAX, progressCurrent, false)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .build()
-        }
-        notificationManagerCompat.notify(1, notification!!)
-        if (progressCurrent == PROGRESS_MAX) {
-            notification = channelId?.let {
-                NotificationCompat.Builder(this, it)
-                    .setContentTitle("Download Image")
-                    .setContentText("Download complete")
-                    .setSmallIcon(R.drawable.ic_download)
-                    .setContentIntent(pendingIntent)
-                    .setSilent(true)
-                    .addAction(R.drawable.ic_cancel, "Cancel", null)
-                    .addAction(R.drawable.ic_stop_dowload, "Stop", snoozePendingIntent) //#1
-                    .setProgress(0, 0, false)
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .build()
-            }
-            notificationManagerCompat.notify(1, notification!!)
-        }
+
+    private fun updateNotification(notification:NotificationCompat.Builder, progress: Int) {
+        notification.setProgress(PROGRESS_MAX, progress, false)
+        notificationManagerCompat?.notify(DOWNLOAD_NOTIFICATION_ID, notification.build())
+    }
+    private fun finishNotification(notification: NotificationCompat.Builder ){
+        notification.setContentText("Download finished")
+            .setOngoing(false)
+            .setProgress(0,0,false)
+        notificationManagerCompat?.cancel(DOWNLOAD_NOTIFICATION_ID)
     }
 }

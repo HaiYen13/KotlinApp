@@ -26,7 +26,7 @@
         <activity android:name=".detail.DetailActivity"/>
         <service android:name=".service.DownImageService"
             android:exported="false"/>
-        <receiver android:name="com.example.mykotlinapp.service.MyReceiver">
+        <receiver android:name=".service.MyReceiver">
             <intent-filter>
                 <action android:name="com.yenvth.DownloadACTION"/>
             </intent-filter>

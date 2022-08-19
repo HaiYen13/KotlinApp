@@ -23,6 +23,7 @@ import com.example.mykotlinapp.R
 import com.example.mykotlinapp.R.id.img_favorite
 import com.example.mykotlinapp.model.ImageModel
 import com.example.mykotlinapp.service.DownImageService
+import com.example.mykotlinapp.service.DownImageService.Companion.DOWNLOADNG_ACTION
 import com.example.mykotlinapp.service.MyReceiver
 import com.example.mykotlinapp.utils.DebugHelper
 import com.example.mykotlinapp.utils.SQLiteHelper
@@ -228,7 +229,7 @@ class DetailActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        var intent = IntentFilter("UPDATE")
+        var intent = IntentFilter(DOWNLOADNG_ACTION)
         this.registerReceiver(mBroadcastReceiver, intent)
 
     }

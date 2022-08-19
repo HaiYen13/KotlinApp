@@ -44,8 +44,8 @@ class FavoriteFragment : Fragment(), FavoriteAdapter.OnItemClickListener{
     private fun getData() {
         sqlFavorite = SQLiteHelper(context)
         sqlFavorite?.getArrayListData(tableName).also { mImageModel = it }
-        DebugHelper.logDebug("FavoriteFragment.getData", "${sqlFavorite?.getArrayListData(tableName)}")
-        DebugHelper.logDebug("FavoriteFragment.getData", "$mImageModel")
+//        DebugHelper.logDebug("FavoriteFragment.getData", "${sqlFavorite?.getArrayListData(tableName)}")
+//        DebugHelper.logDebug("FavoriteFragment.getData", "$mImageModel")
         mFavoriteAdapter = FavoriteAdapter(context, mImageModel,this)
         rcvFavorite?.let{
             it.layoutManager = GridLayoutManager(context, 2)

@@ -26,6 +26,7 @@ import com.example.mykotlinapp.detail.DetailActivity
 import com.example.mykotlinapp.home.HomeViewModel.Companion.fileNames
 import com.example.mykotlinapp.model.ImageModel
 import com.example.mykotlinapp.service.DownImageService
+import com.example.mykotlinapp.service.DownImageService.Companion.DOWNLOADNG_ACTION
 import com.example.mykotlinapp.service.MyReceiver
 import com.example.mykotlinapp.utils.DebugHelper
 import com.example.mykotlinapp.utils.SQLiteHistoryHelper
@@ -51,6 +52,7 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
     private var mBroadcastReceiver : BroadcastReceiver ?= null
     companion object{
         const val historyTable = "History"
+
     }
     var homeViewModel : HomeViewModel ?= null
 
@@ -277,7 +279,7 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
     }
     override fun onStart() {
         super.onStart()
-        var intent = IntentFilter("UPDATE")
+        var intent = IntentFilter(DOWNLOADNG_ACTION)
         activity?.registerReceiver(mBroadcastReceiver, intent)
 
     }
