@@ -1,6 +1,7 @@
 package com.example.mykotlinapp.service
 
 import android.app.*
+import android.app.Notification.EXTRA_NOTIFICATION_ID
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -35,11 +36,14 @@ class DownImageService : Service() {
     private val description = "Test notification"
     private var mNotifyManager: NotificationManager ? = null
     private var channelId: String ? = null
+    private var snoozeIntent: Intent ? = null
+    private var snoozePendingIntent: PendingIntent ? = null
     companion object {
         private const val TAG = "Download"
         private const val DOWNLOADNG_ACTION = "com.yenvth.DownloadACTION"
         private const val DOWNLOADNG_TEXT = "com.yenvth.Text"
         const val CHANNEL_ID = "CHANNEL_EXAMPLE"
+        const val ACTION_SNOOZE = "action_snooze"
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -52,6 +56,12 @@ class DownImageService : Service() {
         startForeground()
     }
     private fun startForeground() {
+        snoozeIntent = Intent(this, MyReceiver::class.java).apply {
+            action = ACTION_SNOOZE
+            putExtra(EXTRA_NOTIFICATION_ID, 0)
+        }
+        snoozePendingIntent =
+            PendingIntent.getBroadcast(this, 0, snoozeIntent, 0)
         mNotifyManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager?
         channelId = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
             createNotificationChannel(CHANNEL_ID, "My Background Service")
@@ -64,7 +74,8 @@ class DownImageService : Service() {
                 .setSmallIcon(R.drawable.ic_download)
                 .setContentIntent(pendingIntent)
                 .setSilent(true)
-                .addAction(R.drawable.ic_cancel, "Stop", null)
+                .addAction(R.drawable.ic_stop_dowload, "Stop", snoozePendingIntent)
+                .addAction(R.drawable.ic_cancel, "cancel", null)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setAutoCancel(true)
                 .build()
@@ -253,7 +264,7 @@ class DownImageService : Service() {
                 .setSmallIcon(R.drawable.ic_download)
                 .setContentIntent(pendingIntent)
                 .addAction(R.drawable.ic_cancel, "Cancel", null) //#0
-                .addAction(R.drawable.ic_stop_dowload, "Stop download", null)//#1
+                .addAction(R.drawable.ic_stop_dowload, "Stop", snoozePendingIntent) //#1
                 .setSilent(true)
                 .setProgress(PROGRESS_MAX, progressCurrent, false)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -269,6 +280,7 @@ class DownImageService : Service() {
                     .setContentIntent(pendingIntent)
                     .setSilent(true)
                     .addAction(R.drawable.ic_cancel, "Cancel", null)
+                    .addAction(R.drawable.ic_stop_dowload, "Stop", snoozePendingIntent) //#1
                     .setProgress(0, 0, false)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .build()

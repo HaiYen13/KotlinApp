@@ -24,13 +24,13 @@
             </intent-filter>
         </activity>
         <activity android:name=".detail.DetailActivity"/>
-        <receiver android:name=".service.MyReceiver">
+        <service android:name=".service.DownImageService"
+            android:exported="false"/>
+        <receiver android:name="com.example.mykotlinapp.service.MyReceiver">
             <intent-filter>
                 <action android:name="com.yenvth.DownloadACTION"/>
             </intent-filter>
         </receiver>
-        <service android:name=".service.DownImageService"
-            android:exported="false"/>
     </application>
 
 </manifest>
