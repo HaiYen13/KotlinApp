@@ -26,6 +26,7 @@ import com.example.mykotlinapp.detail.DetailActivity
 import com.example.mykotlinapp.home.HomeViewModel.Companion.fileNames
 import com.example.mykotlinapp.model.ImageModel
 import com.example.mykotlinapp.service.DownImageService
+import com.example.mykotlinapp.service.DownImageService.Companion.ACTION_SNOOZE
 import com.example.mykotlinapp.service.DownImageService.Companion.DOWNLOADNG_ACTION
 import com.example.mykotlinapp.service.MyReceiver
 import com.example.mykotlinapp.utils.DebugHelper
@@ -181,7 +182,7 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
         tvMultiDown?.setOnClickListener {
             if (isStoragePermissionGranted()) {
                 for ((_, value) in map) {
-                    urls?.add(value.url)?: continue
+                    urls?.add(value.url)
                     historyModel?.add(value)
                 }
                 mProgressDialog?.show()

@@ -1,7 +1,6 @@
 package com.example.mykotlinapp.service
 
 import android.app.*
-import android.app.Notification.EXTRA_NOTIFICATION_ID
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -10,22 +9,18 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.*
 import android.provider.MediaStore
-import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.mykotlinapp.R
-import com.example.mykotlinapp.home.HomeFragment
 import com.example.mykotlinapp.utils.DebugHelper
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import androidx.media.app.NotificationCompat as MediaNotificationCompat
+import kotlinx.coroutines.*
 import java.io.*
 import java.net.URL
 import java.util.*
+import kotlin.coroutines.CoroutineContext
 
 class DownImageService : Service() {
     private val result = Activity.RESULT_CANCELED
@@ -40,6 +35,7 @@ class DownImageService : Service() {
     private var snoozePendingIntent: PendingIntent ? = null
     private var noti : NotificationCompat.Builder?=null
     private var notificationManagerCompat: NotificationManagerCompat ?= null
+    private var job: Job = Job()
     companion object {
         private const val TAG = "Download"
         const val DOWNLOADNG_ACTION = "com.MyKotlinApp.DownloadService.DownloadACTION"
@@ -58,18 +54,18 @@ class DownImageService : Service() {
         startForeground()
     }
     private fun startForeground() {
-        snoozeIntent = Intent(this, DownImageService::class.java).apply {
-            action = ACTION_SNOOZE
-            putExtra(CHANNEL_ID, 0)
-        }
-        snoozePendingIntent =
-            PendingIntent.getService(this, 0, snoozeIntent!!, 0)
-        mNotifyManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager?
         channelId = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
             createNotificationChannel(CHANNEL_ID, "My Background Service")
         } else {
             "CHANNEL_EXAMPLE"
         }
+        snoozeIntent = Intent(this, DownImageService::class.java).apply {
+            action = ACTION_SNOOZE
+            putExtra(channelId, 0)
+        }
+        snoozePendingIntent =
+            PendingIntent.getService(this, 0, snoozeIntent!!, PendingIntent.FLAG_CANCEL_CURRENT)
+        mNotifyManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager?
         notificationManagerCompat = NotificationManagerCompat.from(this)
         noti =
             channelId?.let { NotificationCompat.Builder(this, it)
@@ -78,7 +74,6 @@ class DownImageService : Service() {
                 .setSmallIcon(R.drawable.ic_download)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
-                .addAction(R.drawable.ic_cancel, "Cancel", null) //#0
                 .addAction(R.drawable.ic_stop_dowload, "Stop", snoozePendingIntent) //#1
                 .setSilent(true)
                 .setOnlyAlertOnce(true)
@@ -100,21 +95,40 @@ class DownImageService : Service() {
         service.createNotificationChannel(chan)
         return channelId
     }
+
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        DebugHelper.logDebug("DownImageService.onStartCommand", "")
-        val urls = intent.getStringArrayListExtra("key_down_intent")
-        val resultReceiver =
-            intent.getParcelableExtra<Parcelable>("receiver") as ResultReceiver?
-        val scope = CoroutineScope(Dispatchers.IO)
-        scope.launch{
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    saveImageToScopedStorage(urls, resultReceiver)
-                } else {
-                    saveImageToExternalStorage(urls, resultReceiver)
+        DebugHelper.logDebug("DownImageService.onStartCommand.intent", "${intent.action}")
+        if(intent.action == ACTION_SNOOZE){
+            job.cancel()
+            DebugHelper.logDebug("DownImageService.onStartCommand", "cancel job")
+            noti?.setProgress(0, 0, false)
+            mNotifyManager?.cancel(DOWNLOAD_NOTIFICATION_ID)
+            DebugHelper.logDebug("DownImageService.onStartCommand", "cancel noti")
+            stopSelf()
+            DebugHelper.logDebug("DownImageService.onStartCommand", "stop service")
+        }else{
+            val urls = intent.getStringArrayListExtra("key_down_intent")
+            val resultReceiver =
+                intent.getParcelableExtra<Parcelable>("receiver") as ResultReceiver?
+            val scope = CoroutineScope(Dispatchers.IO)
+            job = scope.launch {
+                try {
+                    if(isActive){
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            delay(100)
+                            DebugHelper.logDebug("DownImageService.onStartCommand", "saveImageToScopedStorage ${intent.action}")
+                            saveImageToScopedStorage(urls, resultReceiver)
+
+                        } else {
+                            delay(100)
+                            DebugHelper.logDebug("DownImageService.onStartCommand", "saveImageToExternalStorage ${intent.action}")
+                            saveImageToExternalStorage(urls, resultReceiver)
+                        }
+                    }
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
         return START_STICKY
@@ -122,13 +136,10 @@ class DownImageService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        mNotifyManager?.cancel(DOWNLOAD_NOTIFICATION_ID)
         DebugHelper.logDebug(TAG, "Service onDestroy")
         Toast.makeText(this, "Service Destroyed", Toast.LENGTH_SHORT).show()
     }
-    private fun stopDownload(){
-
-    }
-
     private fun saveImageToExternalStorage(
         urls: ArrayList<String>?,
         resultReceiver: ResultReceiver?,
@@ -177,9 +188,6 @@ class DownImageService : Service() {
         sendBroadcast(result)
         noti?.let { finishNotification(it) }
     }
-
-
-
 
     private fun saveImageToScopedStorage(
         urls: ArrayList<String>?,
@@ -277,7 +285,9 @@ class DownImageService : Service() {
     private fun finishNotification(notification: NotificationCompat.Builder ){
         notification.setContentText("Download finished")
             .setOngoing(false)
+            .setAutoCancel(true)
+            .clearActions()
             .setProgress(0,0,false)
-        notificationManagerCompat?.cancel(DOWNLOAD_NOTIFICATION_ID)
+        notificationManagerCompat?.notify(DOWNLOAD_NOTIFICATION_ID, notification.build())
     }
 }
