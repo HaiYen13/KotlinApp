@@ -280,10 +280,16 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
     }
     override fun onStart() {
         super.onStart()
-        var intent = IntentFilter(DOWNLOADNG_ACTION)
+        val intent = IntentFilter(DOWNLOADNG_ACTION)
         activity?.registerReceiver(mBroadcastReceiver, intent)
-
     }
+
+    override fun onResume() {
+        super.onResume()
+        val intent = IntentFilter(DOWNLOADNG_ACTION)
+        activity?.registerReceiver(mBroadcastReceiver, intent)
+    }
+
     override fun onStop() {
         super.onStop()
         DebugHelper.logDebug("onStop", "mBroadcastReceiver")
