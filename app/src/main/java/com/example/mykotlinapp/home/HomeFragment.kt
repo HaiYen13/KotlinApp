@@ -1,7 +1,10 @@
 package com.example.mykotlinapp.home
 
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.ProgressDialog
 import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -16,8 +19,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -26,7 +31,6 @@ import com.example.mykotlinapp.detail.DetailActivity
 import com.example.mykotlinapp.home.HomeViewModel.Companion.fileNames
 import com.example.mykotlinapp.model.ImageModel
 import com.example.mykotlinapp.service.DownImageService
-import com.example.mykotlinapp.service.DownImageService.Companion.ACTION_SNOOZE
 import com.example.mykotlinapp.service.DownImageService.Companion.DOWNLOADNG_ACTION
 import com.example.mykotlinapp.service.MyReceiver
 import com.example.mykotlinapp.utils.DebugHelper
@@ -51,6 +55,7 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
     private var mProgressDialog: ProgressDialog ?= null
     private var sqLiteHistoryHelper : SQLiteHistoryHelper?= null
     private var mBroadcastReceiver : BroadcastReceiver ?= null
+    private var isDownSuccess : Boolean = false
     companion object{
         const val historyTable = "History"
 
@@ -68,6 +73,9 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
         homeViewModel = HomeViewModel(context)
         initAction()
         urls = ArrayList()
+//        val intent= Intent()
+//        isDownSuccess = intent.getBooleanExtra("isSuccess", false)
+        DebugHelper.logDebug("HomeFragment.onCreateView.isDownSuccess", "$isDownSuccess")
 
         sqLiteHistoryHelper = SQLiteHistoryHelper(context)
         historyModel = ArrayList()
@@ -113,6 +121,7 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
 //            }
 //        }
         mBroadcastReceiver = MyReceiver(mProgressDialog!!)
+
         homeViewModel!!.getData(fileNames.copyOfRange(0, currentPage + 1)) // ???
         return view
     }
@@ -125,16 +134,18 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        try {
-            val newPos: Int = data?.getIntExtra("currentPosition", 0) ?: 0
+            try {
+                val newPos: Int = data?.getIntExtra("currentPosition", 0) ?: 0
 
-            val newList : ArrayList<ImageModel> = data?.getSerializableExtra("newList")
-                    as ArrayList<ImageModel>
-            initAdapter(newList)
-            rcvCatogory?.smoothScrollToPosition(newPos)
-        }catch (e: Exception){
-            e.printStackTrace()
-        }
+                val newList : ArrayList<ImageModel> = data?.getSerializableExtra("newList")
+                        as ArrayList<ImageModel>
+                initAdapter(newList)
+                rcvCatogory?.smoothScrollToPosition(newPos)
+            }catch (e: Exception){
+                e.printStackTrace()
+            }
+
+
     }
     private fun initAdapter(movieList: ArrayList<ImageModel>) {
         mHomeAdapter = HomeAdapter(movieList, context, this)
@@ -168,10 +179,12 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
         })
         imgMultiDown?.setOnClickListener {
             if (isDownBoxSelected == true) {
+
                 imgMultiDown?.setImageResource(R.drawable.ic_box)
                 tvMultiDown?.visibility = View.GONE
                 isDownBoxSelected = false
                 map.clear()
+
             } else {
                 imgMultiDown?.setImageResource(R.drawable.ic_box_selected)
                 tvMultiDown?.visibility = View.VISIBLE
@@ -182,8 +195,14 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
         tvMultiDown?.setOnClickListener {
             if (isStoragePermissionGranted()) {
                 for ((_, value) in map) {
-                    urls?.add(value.url)
-                    historyModel?.add(value)
+//                    if(urls?.isEmpty() == true){
+//                        Toast.makeText(context, "Please choose Image", Toast.LENGTH_SHORT).show()
+//                    }else{
+                        urls?.add(value.url)
+//                    if(isDownSuccess){
+                        historyModel?.add(value)
+//                    }
+
                 }
                 mProgressDialog?.show()
                 DebugHelper.logDebug("progressDialog", "Visible")
@@ -193,6 +212,7 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
                         it1 ->
                     //Todo: Download use service
                     urls?.let { it2 -> startDownService(it2)}
+
                     sqLiteHistoryHelper?.insertListHistory(it1, historyTable) }
             }
         }
