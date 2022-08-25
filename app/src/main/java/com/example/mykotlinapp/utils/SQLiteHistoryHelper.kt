@@ -7,13 +7,12 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 import com.example.mykotlinapp.model.ImageModel
-import java.util.*
 import kotlin.collections.ArrayList
 
 class SQLiteHistoryHelper(context: Context?) :
     SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
     private var sqLiteDatabase: SQLiteDatabase? = null
-    var contentValues: ContentValues? = null
+    private var contentValues: ContentValues? = null
     private var cursor: Cursor? = null
     override fun onCreate(db: SQLiteDatabase) {
         val queryDownCreateTable =
@@ -33,23 +32,26 @@ class SQLiteHistoryHelper(context: Context?) :
 
     //TODO: them  bang ghi vao history
     fun insertListHistory(arrayList: ArrayList<ImageModel?>, tableName: String?) {
-        try {
-            sqLiteDatabase = writableDatabase
-            //TODO: Tao bien noi dung can them
-            for (model in arrayList) {
-                contentValues = ContentValues()
-                contentValues?.apply {
-                    this.put("name", model?.name)
-                    this.put("img", model?.url)
-                    this.put("isDownLoaded", model?.isSelected)
+        if (!arrayList.isNullOrEmpty()){
+            try {
+                sqLiteDatabase = writableDatabase
+                //TODO: Tao bien noi dung can them
+                for (model in arrayList) {
+                    contentValues = ContentValues()
+                    contentValues?.apply {
+                        this.put("name", model?.name)
+                        this.put("img", model?.url)
+                        this.put("isDownLoaded", model?.isSelected)
+                    }
+                    sqLiteDatabase?.insert(tableName, null, contentValues)
                 }
-                sqLiteDatabase?.insert(tableName, null, contentValues)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                close()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            close()
         }
+
     }
     fun insertHistory(model: ImageModel, tableName: String?) {
         try {
@@ -81,10 +83,10 @@ class SQLiteHistoryHelper(context: Context?) :
     }
 
     fun getDownloadList(tableName: String?): ArrayList<ImageModel> {
-        val models: ArrayList<ImageModel> = ArrayList<ImageModel>()
+        val models: ArrayList<ImageModel> = ArrayList()
         sqLiteDatabase = readableDatabase
         cursor = sqLiteDatabase?.query(true, tableName, null, null, null, null, null, null, null)
-        while (cursor?.let { it.moveToNext() } == true) {
+        while (cursor?.moveToNext() == true) {
             cursor?.let {
                 val name = it.getString(it.getColumnIndex("name"))
                 val img = it.getString(it.getColumnIndex("img"))

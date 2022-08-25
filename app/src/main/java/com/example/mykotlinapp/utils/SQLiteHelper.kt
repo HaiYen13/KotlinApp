@@ -31,6 +31,7 @@ class SQLiteHelper(context: Context?) :
         }
     }
 
+    @SuppressLint("Recycle")
     fun insertFavorite(model: ImageModel, nameTable: String): Boolean {
         try {
             sqLiteDatabase = writableDatabase

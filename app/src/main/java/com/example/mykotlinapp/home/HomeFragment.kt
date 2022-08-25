@@ -144,8 +144,6 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
             }catch (e: Exception){
                 e.printStackTrace()
             }
-
-
     }
     private fun initAdapter(movieList: ArrayList<ImageModel>) {
         mHomeAdapter = HomeAdapter(movieList, context, this)
@@ -193,11 +191,8 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
             mHomeAdapter?.onSelectChange(isDownBoxSelected!!)
         }
         tvMultiDown?.setOnClickListener {
-            if (isStoragePermissionGranted()) {
+            if (isStoragePermissionGranted() && map.isNotEmpty()) {
                 for ((_, value) in map) {
-//                    if(urls?.isEmpty() == true){
-//                        Toast.makeText(context, "Please choose Image", Toast.LENGTH_SHORT).show()
-//                    }else{
                         urls?.add(value.url)
 //                    if(isDownSuccess){
                         historyModel?.add(value)
@@ -214,6 +209,8 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
                     urls?.let { it2 -> startDownService(it2)}
 
                     sqLiteHistoryHelper?.insertListHistory(it1, historyTable) }
+            }else{
+                Toast.makeText(context, "Please choose Image", Toast.LENGTH_SHORT).show()
             }
         }
     }

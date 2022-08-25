@@ -29,8 +29,6 @@ class DownImageService : Service() {
     private val PROGRESS_CURRENT = 0
     private var mNotifyManager: NotificationManager ? = null
     private var channelId: String ? = null
-//    private var snoozeIntent: Intent ? = null
-//    private var snoozePendingIntent: PendingIntent ? = null
     private var noti : NotificationCompat.Builder?=null
     private var notificationManagerCompat: NotificationManagerCompat ?= null
     private var isSuccess = false
@@ -65,12 +63,12 @@ class DownImageService : Service() {
     }
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(channelId: String, channelName: String): String{
-        val chan = NotificationChannel(channelId,
+        val channel = NotificationChannel(channelId,
             channelName, NotificationManager.IMPORTANCE_HIGH)
-        chan.lightColor = Color.BLUE
-        chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+        channel.lightColor = Color.BLUE
+        channel.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
         val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        service.createNotificationChannel(chan)
+        service.createNotificationChannel(channel)
         return channelId
     }
     private fun initNotification(){
@@ -91,14 +89,14 @@ class DownImageService : Service() {
             }
         noti?.let { notificationManagerCompat!!.notify(DOWNLOAD_NOTIFICATION_ID, it.build()) }
     }
-
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         val snoozeIntent = Intent(this, DownImageService::class.java).apply {
             action = ACTION_SNOOZE
             putExtra(channelId, 0)
+            putExtra("key_down_intent", urls)
         }
         val snoozePendingIntent =
-            PendingIntent.getService(this, 0, snoozeIntent!!, PendingIntent.FLAG_CANCEL_CURRENT)
+            PendingIntent.getService(this, 0, snoozeIntent, PendingIntent.FLAG_CANCEL_CURRENT)
         noti?.addAction(R.drawable.ic_stop_dowload, "Stop", snoozePendingIntent)
 
         DebugHelper.logDebug("DownImageService.onStartCommand.intent", "${intent.action}")
@@ -306,7 +304,7 @@ class DownImageService : Service() {
             putExtra(channelId, 0)
             putExtra("key_down_intent", urls)
         }
-        val reDownPendingIntent = PendingIntent.getService(this, 0, reDownIntent!!, PendingIntent.FLAG_UPDATE_CURRENT)
+        val reDownPendingIntent = PendingIntent.getService(this, 0, reDownIntent, PendingIntent.FLAG_UPDATE_CURRENT)
         notification.setContentText("Download is stopped")
             .setOngoing(false)
             .setAutoCancel(true)
@@ -318,6 +316,7 @@ class DownImageService : Service() {
     private fun cancelDownload(){
         job.cancel()
         stopSelf()
+        DebugHelper.logDebug("DownImageService.cancelDownload", "$urls")
         noti?.let { stopDownNotification(it) }
     }
 }
