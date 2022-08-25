@@ -14,13 +14,10 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.mykotlinapp.R
-import com.example.mykotlinapp.home.HomeFragment
 import com.example.mykotlinapp.utils.DebugHelper
 import kotlinx.coroutines.*
 import java.io.*
 import java.net.URL
-import java.util.*
-import kotlin.collections.ArrayList
 
 class DownImageService : Service() {
     private val pendingIntent: PendingIntent? = null
@@ -157,17 +154,19 @@ class DownImageService : Service() {
             var total: Long = 0
             for (urlStr in urls) {
                 val url = URL(urlStr)
+                val pathImage = root + "/" + System.currentTimeMillis() + ".jpg"
                 val inputStream: InputStream = BufferedInputStream(url.openStream(), 8192)
                 val outputStream: OutputStream =
-                    FileOutputStream(root + "/" + System.currentTimeMillis() + ".jpg")
+                    FileOutputStream(pathImage)
                 val data = ByteArray(1024)
                 while (inputStream.read(data).also { count = it } != -1) {
                     if(!job.isActive) {
                         val result = Intent(DOWNLOADNG_ACTION)
                         result.putExtra("process", 0)
+                        result.putExtra("path", pathImage)
                         sendBroadcast(result)
                         noti?.setProgress(0, 0, false)
-                        noti?.setOngoing(true)
+                        noti?.setOngoing(false)
                         noti?.setAutoCancel(true)
                         return
                     }
@@ -225,6 +224,7 @@ class DownImageService : Service() {
                     //4
                     newImage.put(MediaStore.MediaColumns.RELATIVE_PATH,
                         Environment.DIRECTORY_PICTURES + "/MyApp/")
+
                     val url = URL(ulrStr)
                     val connection = url.openConnection()
                     connection.connect()
@@ -236,7 +236,7 @@ class DownImageService : Service() {
                             result.putExtra("process", 0)
                             sendBroadcast(result)
                             noti?.setProgress(0, 0, false)
-                            noti?.setOngoing(true)
+                            noti?.setOngoing(false)
                             noti?.setAutoCancel(true)
                             return
                         }

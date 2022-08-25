@@ -47,14 +47,13 @@ class DownloadFragment : Fragment(), DownloadAdapter.OnItemClickListener {
         getData()
         tvClearAll?.setOnClickListener{
             removeAll()
-
         }
-
     }
 
     private fun removeAll() {
         sqLiteHistoryHelper?.deleteAll(historyTable)
         downList.clear()
+        mDownloadAdapter?.notifyDataSetChanged()
     }
 
     private fun getData(){

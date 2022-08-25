@@ -1,10 +1,7 @@
 package com.example.mykotlinapp.home
 
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.ProgressDialog
 import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -22,7 +19,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -191,11 +187,15 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
             mHomeAdapter?.onSelectChange(isDownBoxSelected!!)
         }
         tvMultiDown?.setOnClickListener {
-            if (isStoragePermissionGranted() && map.isNotEmpty()) {
+            if (map.isEmpty()) {
+                Toast.makeText(context, "Please choose Image", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (isStoragePermissionGranted()) {
                 for ((_, value) in map) {
-                        urls?.add(value.url)
+                    urls?.add(value.url)
 //                    if(isDownSuccess){
-                        historyModel?.add(value)
+                    historyModel?.add(value)
 //                    }
 
                 }
@@ -203,14 +203,12 @@ class HomeFragment: Fragment(), HomeAdapter.OnItemClickListener, ActivityCompat.
                 DebugHelper.logDebug("progressDialog", "Visible")
                 //TODO: download sd coroutine
 //                urls?.let { it1 -> homeViewModel?.download(it1) }
-                historyModel?.let {
-                        it1 ->
+                historyModel?.let { it1 ->
                     //Todo: Download use service
-                    urls?.let { it2 -> startDownService(it2)}
+                    urls?.let { it2 -> startDownService(it2) }
 
-                    sqLiteHistoryHelper?.insertListHistory(it1, historyTable) }
-            }else{
-                Toast.makeText(context, "Please choose Image", Toast.LENGTH_SHORT).show()
+                    sqLiteHistoryHelper?.insertListHistory(it1, historyTable)
+                }
             }
         }
     }
